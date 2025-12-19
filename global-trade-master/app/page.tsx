@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, X, Loader2, FileSpreadsheet, Plus,
   Search, CheckSquare, Square, RefreshCw, Zap, ShieldAlert,
   Calendar, BookOpen, Mic2, Shield, Trophy, Edit3, Languages, Cloud,
-  Maximize2, ChevronLeft, ChevronRight
+  Maximize2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp // 新增图标
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabaseClient';
@@ -17,7 +17,7 @@ import { supabase } from '@/lib/supabaseClient';
 const DEEPLX_ENDPOINT = "https://api.deeplx.org/eIWrZKBZE5N-E8C-k-tB6uwxbgBD-7sVjt45RQ16EoI/translate";
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxWAorgDqTQhmAxTyJ7cbZ1JAKphJKknw3vCyrh3Zq1Gk2KHyoODXp2mYQydHvJ5hRZ/exec";
 const ADMIN_PASSWORD = "888"; 
-const ITEMS_PER_PAGE = 12; // 分页：每页显示多少个
+const ITEMS_PER_PAGE = 12; 
 
 // --- 类型定义 ---
 type TranslationSet = { CN: string; VN: string; TH: string; PH: string; MY: string; EN: string; };
@@ -29,11 +29,8 @@ type Product = {
 // --- 工具函数 ---
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const cleanText = (text: any): string => String(text || "").trim().replace(/[\x00-\x09\x0B-\x1F\x7F]/g, "");
-
-// --- 核心上传函数 (通用) ---
 const uploadToSupabase = async (file: File): Promise<string> => {
   const fileExt = file.name.split('.').pop();
-  // 使用随机文件名避免中文冲突
   const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
   const { error } = await supabase.storage.from('product-images').upload(fileName, file);
   if (error) throw error;
@@ -42,18 +39,16 @@ const uploadToSupabase = async (file: File): Promise<string> => {
 };
 
 // ==========================================
-// 🖼️ 图片组件 (支持上传、删除、放大)
+// 🖼️ 图片组件
 // ==========================================
 const ImageUploader = ({ src, onUpload, onDelete, onZoom, isMain = false, className = "" }: any) => {
   const [uploading, setUploading] = useState(false);
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
-    await onUpload(e.target.files[0]); // 直接传 file 对象
+    await onUpload(e.target.files[0]);
     setUploading(false);
   };
-
   return (
     <div className={`relative group ${isMain ? 'w-full h-48' : 'w-16 h-16 flex-shrink-0'} ${className}`}>
       {src ? (
@@ -87,6 +82,95 @@ const TranslatableInput = ({ value, onChange, placeholder, rows = 1, className =
       {rows===1 ? <input value={value.CN} onChange={e=>onChange({...value,CN:e.target.value})} className="w-full border rounded px-2 py-1 pr-8 text-sm outline-none focus:ring-2 focus:ring-blue-200" placeholder={placeholder}/>
       : <textarea value={value.CN} onChange={e=>onChange({...value,CN:e.target.value})} className="w-full border rounded px-2 py-1 pr-8 text-sm outline-none focus:ring-2 focus:ring-blue-200 resize-none" rows={rows} placeholder={placeholder}/>}
       <button onClick={handleTrans} disabled={loading} className="absolute right-1 top-1 p-1 text-blue-500 hover:bg-blue-50 rounded" title="点击AI翻译">{loading?<Loader2 className="w-3 h-3 animate-spin"/>:<Languages className="w-3 h-3"/>}</button>
+    </div>
+  );
+};
+
+// ==========================================
+// 🆕 新增组件：单个产品卡片 (支持文本展开)
+// ==========================================
+const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageUpload, setZoomImg, fetchProducts }: any) => {
+  // 🌟 控制展开/收起的状态
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all relative">
+      {isAdmin && (
+        <button 
+          onClick={() => handleDeleteProduct(p.id!, p.sku)}
+          className="absolute top-2 right-2 z-20 bg-white p-2 rounded-full shadow-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+
+      <div className="relative p-4 pb-0">
+         <ImageUploader 
+           src={p.mainImage} 
+           isMain 
+           onZoom={setZoomImg}
+           onUpload={(file: File) => handleImageUpload(p.sku, file, false)}
+           onDelete={async () => { await supabase.from('products').update({ main_image: '' }).eq('sku', p.sku); fetchProducts(); }}
+         />
+         <span className="absolute top-6 left-6 bg-black/60 text-white px-2 py-0.5 rounded text-xs backdrop-blur">{p.sku}</span>
+      </div>
+
+      <div className="p-5">
+         {/* 1. 标题：取消固定高度，允许完整显示 */}
+         <h3 className="font-bold text-slate-800 mb-2 leading-tight">
+            {p.name[activeLang]||p.name.CN}
+         </h3>
+
+         <div className="space-y-2 text-sm">
+            {/* 尺寸 */}
+            <div className="bg-slate-50 p-2 rounded border border-slate-100">
+               <span className="text-[10px] text-slate-400 block uppercase font-bold">Size</span>
+               {p.size[activeLang]||p.size.CN}
+            </div>
+            
+            {/* 2. 产品特点：支持点击展开 */}
+            <div 
+              className={`bg-slate-50 p-2 rounded border border-slate-100 transition-all cursor-pointer hover:bg-blue-50/50 group`}
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+               <div className="flex justify-between items-center mb-1">
+                 <span className="text-[10px] text-slate-400 uppercase font-bold">Features</span>
+                 <span className="text-[10px] text-blue-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {isExpanded ? <>收起 <ChevronUp className="w-3 h-3"/></> : <>展开 <ChevronDown className="w-3 h-3"/></>}
+                 </span>
+               </div>
+               
+               {/* 核心逻辑：如果 expanded 为 true，不限制行数；否则限制 3 行 */}
+               <p className={`text-slate-600 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
+                  {p.features[activeLang]||p.features.CN}
+               </p>
+               
+               {!isExpanded && (
+                  <div className="text-center mt-1">
+                     <ChevronDown className="w-4 h-4 text-slate-300 mx-auto"/>
+                  </div>
+               )}
+            </div>
+         </div>
+
+         <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-[10px] text-slate-400 uppercase font-bold mb-2">Patterns</p>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+               {p.patternImages.map((img: string, idx: number) => (
+                  <ImageUploader 
+                    key={idx} 
+                    src={img} 
+                    onZoom={setZoomImg}
+                    onDelete={async () => {
+                     const newP = [...p.patternImages]; newP.splice(idx, 1);
+                     await supabase.from('products').update({ pattern_images: newP }).eq('sku', p.sku);
+                     fetchProducts();
+                  }}/>
+               ))}
+               <ImageUploader onUpload={(file: File) => handleImageUpload(p.sku, file, true)}/>
+            </div>
+         </div>
+      </div>
     </div>
   );
 };
@@ -133,7 +217,7 @@ const syncLiveItem = async (category: string, data: any, id?: number) => {
 const deleteLiveItem = async (id: number) => { await supabase.from('live_hub').delete().eq('id', id); };
 
 // ==========================================
-// 📺 LiveHub 组件 (含翻译与独立上传)
+// 📺 LiveHub 组件
 // ==========================================
 const LiveHub = ({ isAdmin, activeLang, onZoom }: any) => {
   const [tutorials, setTutorials] = useState<any[]>([]);
@@ -159,14 +243,10 @@ const LiveHub = ({ isAdmin, activeLang, onZoom }: any) => {
   const handleDelete = async (id: number) => { if(confirm("确定删除?")) { await deleteLiveItem(id); loadLiveHub(); }};
   const renderText = (set: any) => set?.[activeLang] || set?.CN || '...';
   const emptyTrans = { CN:'', EN:'', VN:'', TH:'', PH:'', MY:'' };
-
-  // 教程图片单独上传
   const handleTutorialImg = async (file: File, tutId: number, stepIndex: number, currentSteps: any[]) => {
     try {
       const url = await uploadToSupabase(file);
-      const newSteps = [...currentSteps];
-      newSteps[stepIndex].image = url;
-      // 找到对应的 tutorial 数据并更新
+      const newSteps = [...currentSteps]; newSteps[stepIndex].image = url;
       const tut = tutorials.find(t => t.id === tutId);
       if(tut) handleSave('tutorial', { ...tut.data, steps: newSteps }, tutId);
     } catch(e) { alert("图片上传失败"); }
@@ -176,7 +256,7 @@ const LiveHub = ({ isAdmin, activeLang, onZoom }: any) => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      {/* 3. 接入教程 (重点升级) */}
+      {/* 教程 */}
       <section className="bg-white rounded-2xl p-6 border border-slate-100">
          <div className="flex items-center gap-2 mb-6 border-b pb-2"><BookOpen className="w-5 h-5 text-purple-600"/> <h2 className="text-lg font-bold">接入教程 / Tutorials</h2>{isAdmin && <button onClick={()=>handleSave('tutorial', { platform: 'TikTok', title: {...emptyTrans,CN:'新教程'}, steps: [] })} className="ml-auto text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded">+ 新增</button>}</div>
          <div className="space-y-8">{tutorials.map(tut => { const d = tut.data; return (
@@ -188,72 +268,26 @@ const LiveHub = ({ isAdmin, activeLang, onZoom }: any) => {
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 overflow-x-auto pb-2">
                {d.steps?.map((step: any, idx: number) => (
                  <div key={idx} className="relative bg-white p-2 rounded-lg border h-full flex flex-col shadow-sm">
-                   {/* 图片区域：独立上传 */}
                    <div className="relative aspect-[9/16] bg-slate-100 rounded mb-2 overflow-hidden border border-slate-100">
-                     <ImageUploader 
-                        src={step.image} 
-                        isMain 
-                        onZoom={onZoom}
-                        onUpload={(file: File) => handleTutorialImg(file, tut.id, idx, d.steps)}
-                        // 仅允许管理员删除/替换
-                        className={!isAdmin ? "pointer-events-none" : ""}
-                     />
+                     <ImageUploader src={step.image} isMain onZoom={onZoom} onUpload={(file: File) => handleTutorialImg(file, tut.id, idx, d.steps)} className={!isAdmin ? "pointer-events-none" : ""}/>
                      <span className="absolute top-1 left-1 bg-black/50 text-white text-[10px] px-1.5 rounded-full backdrop-blur">Step {idx+1}</span>
                    </div>
-                   {/* 文字区域：支持翻译 */}
-                   {isAdmin ? (
-                     <div className="flex flex-col gap-2 h-full">
-                        <TranslatableInput value={step.text} onChange={(v:any)=>{const newSteps=[...d.steps];newSteps[idx].text=v;handleSave('tutorial',{...d,steps:newSteps},tut.id)}} rows={3} className="text-xs"/>
-                        <button onClick={()=>{const newSteps=d.steps.filter((_:any,i:number)=>i!==idx);handleSave('tutorial',{...d,steps:newSteps},tut.id)}} className="mt-auto text-xs text-red-400 border border-red-200 rounded py-1 hover:bg-red-50">删除步骤</button>
-                     </div>
-                   ) : <p className="text-xs text-slate-600 leading-relaxed font-medium">{renderText(step.text)}</p>}
+                   {isAdmin ? (<div className="flex flex-col gap-2 h-full"><TranslatableInput value={step.text} onChange={(v:any)=>{const newSteps=[...d.steps];newSteps[idx].text=v;handleSave('tutorial',{...d,steps:newSteps},tut.id)}} rows={3} className="text-xs"/><button onClick={()=>{const newSteps=d.steps.filter((_:any,i:number)=>i!==idx);handleSave('tutorial',{...d,steps:newSteps},tut.id)}} className="mt-auto text-xs text-red-400 border border-red-200 rounded py-1 hover:bg-red-50">删除步骤</button></div>) 
+                   : <p className="text-xs text-slate-600 leading-relaxed font-medium">{renderText(step.text)}</p>}
                  </div>
                ))}{isAdmin && <button onClick={()=>handleSave('tutorial', {...d, steps:[...(d.steps||[]), { image:'', text: emptyTrans }]}, tut.id)} className="border-2 border-dashed border-slate-300 rounded-lg h-64 w-40 flex flex-col gap-2 items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-blue-500 hover:border-blue-300 transition-all"><Plus/><span className="text-xs">添加步骤</span></button>}
              </div>
            </div>
          );})}</div>
       </section>
-
-      {/* 计划 */}
-      <section className="bg-white rounded-2xl p-6 border border-slate-100">
-        <div className="flex items-center gap-2 mb-4 border-b pb-2"><Calendar className="w-5 h-5 text-blue-600"/><h2 className="text-lg font-bold">直播计划 / Weekly Plan</h2>
-          {isAdmin && <button onClick={() => handleSave('plan', { day: {...emptyTrans,CN:'周一'}, country: 'VN', activity: {...emptyTrans,CN:'活动'}, details: emptyTrans })} className="ml-auto text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">+ 新增</button>}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {plans.map(p => { const d = p.data; return (
-              <div key={p.id} className="bg-slate-50 p-4 rounded-xl border relative">
-                {isAdmin && <button onClick={()=>handleDelete(p.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>}
-                <div className="flex gap-2 mb-2 items-center">
-                  {isAdmin ? <><TranslatableInput value={d.day} onChange={(v:any)=>handleSave('plan', {...d, day:v}, p.id)} className="w-20"/><input value={d.country} onChange={e=>handleSave('plan', {...d, country:e.target.value}, p.id)} className="w-16 text-xs border rounded px-1 py-1 font-bold"/><TranslatableInput value={d.activity} onChange={(v:any)=>handleSave('plan', {...d, activity:v}, p.id)} className="flex-1"/></>
-                  : <><span className="font-bold bg-white px-2 py-0.5 rounded shadow-sm text-sm">{renderText(d.day)}</span><span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">{d.country}</span><span className="text-xs text-slate-500 border border-blue-200 px-1 rounded">{renderText(d.activity)}</span></>}
-                </div>
-                {isAdmin ? <TranslatableInput value={d.details} onChange={(v:any)=>handleSave('plan', {...d, details:v}, p.id)} rows={3}/> : <p className="text-sm text-slate-700 mt-2">{renderText(d.details)}</p>}
-              </div>
-          );})}
-        </div>
-      </section>
       
-      {/* 规则 */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[{t:'violation',c:'red',n:'红线规则'},{t:'incentive',c:'amber',n:'激励政策'}].map((conf:any) => (
-          <div key={conf.t} className={`bg-white rounded-2xl border border-${conf.c}-100 p-6`}>
-             <div className={`flex items-center gap-2 mb-4 text-${conf.c}-600`}><Shield className="w-5 h-5"/> <h2 className="text-lg font-bold">{conf.n}</h2>{isAdmin && <button onClick={()=>handleSave('policy', { type: conf.t, title: emptyTrans, content: emptyTrans })} className={`ml-auto text-xs bg-${conf.c}-50 px-2 py-1 rounded`}>+ 新增</button>}</div>
-             <div className="space-y-3">{policies.filter(x => x.data.type === conf.t).map(p => { const d = p.data; return (
-               <div key={p.id} className={`bg-${conf.c}-50/50 p-3 rounded-lg border border-${conf.c}-100 text-sm`}>
-                 {isAdmin ? <div className="space-y-2"><div className="flex justify-between gap-2"><TranslatableInput value={d.title} onChange={(v:any)=>handleSave('policy', {...d, title:v}, p.id)} className="font-bold w-full"/><button onClick={()=>handleDelete(p.id)}><Trash2 className="w-3 h-3 text-red-300"/></button></div><TranslatableInput value={d.content} onChange={(v:any)=>handleSave('policy', {...d, content:v}, p.id)} rows={2}/></div>
-                 : <><h4 className={`font-bold text-${conf.c}-700 mb-1`}>{renderText(d.title)}</h4><p className="text-slate-600">{renderText(d.content)}</p></>}
-               </div>
-             );})}</div>
-          </div>
-        ))}
-      </section>
-      {/* 话术 */}
+      {/* 计划 & 规则 & 话术 (保持原样) */}
       <section className="bg-white rounded-2xl p-6 border border-slate-100">
-         <div className="flex items-center gap-2 mb-4 border-b pb-2"><Mic2 className="w-5 h-5 text-green-600"/><h2 className="text-lg font-bold">话术 / Scripts</h2>{isAdmin && <button onClick={()=>handleSave('script', { scene:'场景', text: emptyTrans })} className="ml-auto text-xs bg-green-50 text-green-600 px-2 py-1 rounded">+ 新增</button>}</div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{scripts.map(s => { const d = s.data; return (
-           <div key={s.id} className="bg-slate-50 p-4 rounded-xl border relative">{isAdmin && <button onClick={()=>handleDelete(s.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>}<div className="mb-2">{isAdmin ? <input value={d.scene} onChange={e=>handleSave('script',{...d,scene:e.target.value},s.id)} className="font-bold text-sm px-1 rounded"/> : <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">{d.scene}</span>}</div>{isAdmin ? <TranslatableInput value={d.text} onChange={(v:any)=>handleSave('script',{...d,text:v},s.id)} rows={3}/> : <p className="font-bold text-slate-800 text-sm mb-2">{renderText(d.text)}</p>}</div>
-         );})}</div>
+        <div className="flex items-center gap-2 mb-4 border-b pb-2"><Calendar className="w-5 h-5 text-blue-600"/><h2 className="text-lg font-bold">直播计划 / Weekly Plan</h2>{isAdmin && <button onClick={() => handleSave('plan', { day: {...emptyTrans,CN:'周一'}, country: 'VN', activity: {...emptyTrans,CN:'活动'}, details: emptyTrans })} className="ml-auto text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">+ 新增</button>}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{plans.map(p => { const d = p.data; return (<div key={p.id} className="bg-slate-50 p-4 rounded-xl border relative">{isAdmin && <button onClick={()=>handleDelete(p.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>}<div className="flex gap-2 mb-2 items-center">{isAdmin ? <><TranslatableInput value={d.day} onChange={(v:any)=>handleSave('plan', {...d, day:v}, p.id)} className="w-20"/><input value={d.country} onChange={e=>handleSave('plan', {...d, country:e.target.value}, p.id)} className="w-16 text-xs border rounded px-1 py-1 font-bold"/><TranslatableInput value={d.activity} onChange={(v:any)=>handleSave('plan', {...d, activity:v}, p.id)} className="flex-1"/></> : <><span className="font-bold bg-white px-2 py-0.5 rounded shadow-sm text-sm">{renderText(d.day)}</span><span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">{d.country}</span><span className="text-xs text-slate-500 border border-blue-200 px-1 rounded">{renderText(d.activity)}</span></>}</div>{isAdmin ? <TranslatableInput value={d.details} onChange={(v:any)=>handleSave('plan', {...d, details:v}, p.id)} rows={3}/> : <p className="text-sm text-slate-700 mt-2">{renderText(d.details)}</p>}</div>);})}</div>
       </section>
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">{[{t:'violation',c:'red',n:'红线规则'},{t:'incentive',c:'amber',n:'激励政策'}].map((conf:any) => (<div key={conf.t} className={`bg-white rounded-2xl border border-${conf.c}-100 p-6`}><div className={`flex items-center gap-2 mb-4 text-${conf.c}-600`}><Shield className="w-5 h-5"/> <h2 className="text-lg font-bold">{conf.n}</h2>{isAdmin && <button onClick={()=>handleSave('policy', { type: conf.t, title: emptyTrans, content: emptyTrans })} className={`ml-auto text-xs bg-${conf.c}-50 px-2 py-1 rounded`}>+ 新增</button>}</div><div className="space-y-3">{policies.filter(x => x.data.type === conf.t).map(p => { const d = p.data; return (<div key={p.id} className={`bg-${conf.c}-50/50 p-3 rounded-lg border border-${conf.c}-100 text-sm`}>{isAdmin ? <div className="space-y-2"><div className="flex justify-between gap-2"><TranslatableInput value={d.title} onChange={(v:any)=>handleSave('policy', {...d, title:v}, p.id)} className="font-bold w-full"/><button onClick={()=>handleDelete(p.id)}><Trash2 className="w-3 h-3 text-red-300"/></button></div><TranslatableInput value={d.content} onChange={(v:any)=>handleSave('policy', {...d, content:v}, p.id)} rows={2}/></div> : <><h4 className={`font-bold text-${conf.c}-700 mb-1`}>{renderText(d.title)}</h4><p className="text-slate-600">{renderText(d.content)}</p></>}</div>);})}</div></div>))}</section>
+      <section className="bg-white rounded-2xl p-6 border border-slate-100"><div className="flex items-center gap-2 mb-4 border-b pb-2"><Mic2 className="w-5 h-5 text-green-600"/><h2 className="text-lg font-bold">话术 / Scripts</h2>{isAdmin && <button onClick={()=>handleSave('script', { scene:'场景', text: emptyTrans })} className="ml-auto text-xs bg-green-50 text-green-600 px-2 py-1 rounded">+ 新增</button>}</div><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{scripts.map(s => { const d = s.data; return (<div key={s.id} className="bg-slate-50 p-4 rounded-xl border relative">{isAdmin && <button onClick={()=>handleDelete(s.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="w-4 h-4"/></button>}<div className="mb-2">{isAdmin ? <input value={d.scene} onChange={e=>handleSave('script',{...d,scene:e.target.value},s.id)} className="font-bold text-sm px-1 rounded"/> : <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">{d.scene}</span>}</div>{isAdmin ? <TranslatableInput value={d.text} onChange={(v:any)=>handleSave('script',{...d,text:v},s.id)} rows={3}/> : <p className="font-bold text-slate-800 text-sm mb-2">{renderText(d.text)}</p>}</div>);})}</div></section>
     </div>
   );
 };
@@ -265,32 +299,23 @@ export default function DigitalProductCatalog() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'live'>('catalog');
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeLang, setActiveLang] = useState<keyof TranslationSet>('CN');
-  
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [zoomImg, setZoomImg] = useState<string | null>(null);
-  
-  // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 加载产品
   const fetchProducts = async () => {
     setLoading(true);
     const { data } = await supabase.from('products').select('*').order('id', {ascending: false});
     if (data) { 
-      setProducts(data.map((p: any) => ({ 
-        ...p, 
-        mainImage: p.main_image || '', 
-        patternImages: p.pattern_images || [] 
-      }))); 
+      setProducts(data.map((p: any) => ({ ...p, mainImage: p.main_image || '', patternImages: p.pattern_images || [] }))); 
     }
     setLoading(false);
   };
   useEffect(() => { fetchProducts(); }, []);
 
-  // --- 图片上传逻辑 ---
   const handleImageUpload = async (sku: string, file: File, isPattern: boolean) => {
     try {
       const publicUrl = await uploadToSupabase(file);
@@ -351,12 +376,8 @@ export default function DigitalProductCatalog() {
     reader.readAsBinaryString(file);
   };
 
-  const handleAdminToggle = () => {
-    if (isAdmin) setIsAdmin(false); else if (prompt("管理员密码") === ADMIN_PASSWORD) setIsAdmin(true); else alert("错误");
-  };
-  const handleClearDatabase = async () => {
-    if (isAdmin && confirm("清空全部?")) { setLoading(true); await supabase.from('products').delete().neq('id', 0); setProducts([]); setLoading(false); }
-  };
+  const handleAdminToggle = () => { if (isAdmin) setIsAdmin(false); else if (prompt("管理员密码") === ADMIN_PASSWORD) setIsAdmin(true); else alert("错误"); };
+  const handleClearDatabase = async () => { if (isAdmin && confirm("清空全部?")) { setLoading(true); await supabase.from('products').delete().neq('id', 0); setProducts([]); setLoading(false); } };
 
   // --- 分页逻辑 ---
   const filteredProducts = useMemo(() => products.filter(p => !searchTerm || (p.sku+p.name.CN).toLowerCase().includes(searchTerm.toLowerCase())), [products, searchTerm]);
@@ -395,30 +416,19 @@ export default function DigitalProductCatalog() {
              {loading && <div className="text-center text-blue-500 text-sm mb-4 animate-pulse">{progress || "正在同步云端数据..."}</div>}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {displayProducts.map(p => (
-                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all relative">
-                      {isAdmin && (<button onClick={() => handleDeleteProduct(p.id!, p.sku)} className="absolute top-2 right-2 z-20 bg-white p-2 rounded-full shadow-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"><Trash2 className="w-4 h-4" /></button>)}
-                      <div className="relative p-4 pb-0">
-                         <ImageUploader src={p.mainImage} isMain onZoom={setZoomImg} onUpload={(file:File) => handleImageUpload(p.sku, file, false)} onDelete={async () => { await supabase.from('products').update({ main_image: '' }).eq('sku', p.sku); fetchProducts(); }}/>
-                         <span className="absolute top-6 left-6 bg-black/60 text-white px-2 py-0.5 rounded text-xs backdrop-blur">{p.sku}</span>
-                      </div>
-                      <div className="p-5">
-                         <h3 className="font-bold text-slate-800 mb-2 line-clamp-2 h-10">{p.name[activeLang]||p.name.CN}</h3>
-                         <div className="space-y-2 text-sm">
-                            <div className="bg-slate-50 p-2 rounded border border-slate-100"><span className="text-[10px] text-slate-400 block uppercase font-bold">Size</span>{p.size[activeLang]||p.size.CN}</div>
-                            <div className="bg-slate-50 p-2 rounded border border-slate-100"><span className="text-[10px] text-slate-400 block uppercase font-bold">Features</span><p className="line-clamp-4">{p.features[activeLang]||p.features.CN}</p></div>
-                         </div>
-                         <div className="mt-4 pt-4 border-t border-slate-100">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold mb-2">Patterns</p>
-                            <div className="flex gap-2 overflow-x-auto pb-2">
-                               {p.patternImages.map((img, idx) => (<ImageUploader key={idx} src={img} onZoom={setZoomImg} onDelete={async () => { const newP = [...p.patternImages]; newP.splice(idx, 1); await supabase.from('products').update({ pattern_images: newP }).eq('sku', p.sku); fetchProducts(); }}/>))}
-                               <ImageUploader onUpload={(file:File) => handleImageUpload(p.sku, file, true)}/>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
+                   // 🌟 使用提取出来的单独卡片组件，支持展开逻辑
+                   <ProductCard 
+                     key={p.id} 
+                     p={p} 
+                     activeLang={activeLang} 
+                     isAdmin={isAdmin} 
+                     handleDeleteProduct={handleDeleteProduct} 
+                     handleImageUpload={handleImageUpload} 
+                     setZoomImg={setZoomImg} 
+                     fetchProducts={fetchProducts}
+                   />
                 ))}
              </div>
-             {/* 分页控制器 */}
              {totalPages > 1 && (
                <div className="flex justify-center items-center gap-4 py-4">
                  <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-full border bg-white disabled:opacity-50 hover:bg-slate-50"><ChevronLeft className="w-5 h-5"/></button>
@@ -429,29 +439,6 @@ export default function DigitalProductCatalog() {
           </>
         )}
       </main>
-{/* --- WhatsApp 悬浮按钮开始 --- */}
-      <a
-        href="https://wa.me/8615038655729"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-xl hover:scale-105 transition-transform duration-300 group"
-      >
-        {/* WhatsApp 图标 SVG */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          fill="currentColor"
-          viewBox="0 0 16 16"
-        >
-          <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
-        </svg>
-        
-        {/* 按钮文字 */}
-        <span className="font-bold">Contact Us</span>
-      </a>
-      {/* --- WhatsApp 悬浮按钮结束 --- */}
-      {/* 图片放大遮罩 */}
       {zoomImg && (<div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200" onClick={() => setZoomImg(null)}><img src={zoomImg} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"/><button className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"><X className="w-8 h-8" /></button></div>)}
     </div>
   );
