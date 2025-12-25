@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, X, Loader2, FileSpreadsheet, Plus,
   Search, CheckSquare, Square, RefreshCw, Zap, ShieldAlert,
   Calendar, BookOpen, Mic2, Shield, Trophy, Edit3, Languages, Cloud,
-  Maximize2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp // 新增图标
+  Maximize2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MessageCircle// 新增图标
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabaseClient';
@@ -440,6 +440,15 @@ export default function DigitalProductCatalog() {
         )}
       </main>
       {zoomImg && (<div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200" onClick={() => setZoomImg(null)}><img src={zoomImg} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"/><button className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"><X className="w-8 h-8" /></button></div>)}
+      <a 
+        href="https://wa.me/8615038655729" // ⚠️ 请把这里的数字换成你的 WhatsApp 手机号
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#20bd5a] hover:scale-105 transition-all flex items-center gap-2 font-bold animate-in fade-in zoom-in"
+      >
+        <MessageCircle className="w-5 h-5" />
+        <span>Contact Us</span>
+      </a>
     </div>
   );
 }
