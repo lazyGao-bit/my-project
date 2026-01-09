@@ -1,5 +1,18 @@
 {
   "dependencies": {
-    "@supabase/supabase-js": "^2.87.1"
+    "@supabase/auth-ui-react": "^0.4.7",
+    "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.90.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.24.12",
+    "lucide-react": "^0.562.0",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
   }
 }
