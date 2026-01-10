@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import type { Database } from '../../lib/database.types';
+import { LoaderCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // 新增: 用户名
+  const [country, setCountry] = useState('vietnam'); // 新增: 国家
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,92 +28,104 @@ export default function LoginPage() {
 
     try {
       if (isSigningUp) {
-        // --- 注册 --- 
-        const { error } = await supabase.auth.signUp({
+        // --- 注册逻辑 ---
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
         });
-        if (error) throw error;
-        // 为了实现无需验证，你需要在 Supabase 项目中禁用邮件确认。
-        // 禁用后，用户注册完即可直接登录。
-        alert('注册成功！请现在登录。');
-        setIsSigningUp(false); // 切换回登录视图
+        if (authError) throw authError;
+
+        if (authData.user) {
+          // 注册成功后，将额外信息写入 profiles 表
+          const { error: profileError } = await supabase.from('profiles').insert({
+            id: authData.user.id,
+            email: email,
+            username: username,
+            country: country,
+            role: 'creator' // 默认为主播
+          });
+          
+          if (profileError) {
+             console.error("Profile creation failed:", profileError);
+             // 注意：实际生产中可能需要处理回滚，或提示用户
+          }
+        }
+
+        // 假设你已经在 Supabase 关闭了邮件验证，这里直接提示成功
+        alert('注册成功！欢迎加入 YYT。');
+        setIsSigningUp(false); // 切换回登录模式
       } else {
-        // --- 登录 ---
+        // --- 登录逻辑 ---
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-
-        // 登录成功后，重定向到仪表盘。
-        // 管理员检查逻辑将在后续添加。
         router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.message || '发生未知错误。');
+      setError(err.message || '操作失败，请重试。');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-      <div className="max-w-md w-full bg-white shadow-md rounded-lg p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          {isSigningUp ? '创建账户' : '欢迎回来'}
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {isSigningUp ? '申请成为 YYT 主播' : '登录 YYT 工作台'}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            全球领先的跨境直播电商平台
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleAuthAction}>
+          <div className="rounded-md shadow-sm space-y-4">
+            {/* 基础信息 */}
+            <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="you@example.com" />
+            </div>
+            <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+               <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="••••••••" minLength={6} />
+            </div>
 
-        <form onSubmit={handleAuthAction}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              邮箱
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
+            {/* 注册时显示的额外字段 */}
+            {isSigningUp && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">主播昵称</label>
+                  <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="你的直播名" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">所属国家/地区</label>
+                  <select value={country} onChange={e => setCountry(e.target.value)} className="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                    <option value="vietnam">越南 (Vietnam)</option>
+                    <option value="thailand">泰国 (Thailand)</option>
+                    <option value="malaysia">马来西亚 (Malaysia)</option>
+                    <option value="philippines">菲律宾 (Philippines)</option>
+                  </select>
+                </div>
+              </>
+            )}
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              密码 (至少6位)
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              required
-              minLength={6}
-            />
-          </div>
-          {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-blue-300"
-            >
-              {loading ? '处理中...' : (isSigningUp ? '注册' : '登录')}
+
+          {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+
+          <div>
+            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50">
+              {loading ? <LoaderCircle className="animate-spin" /> : (isSigningUp ? '提交注册申请' : '立即登录')}
             </button>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsSigningUp(!isSigningUp);
-                setError(null);
-              }}
-              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-            >
-              {isSigningUp ? '已有账户？去登录' : '没有账户？去注册'}
-            </a>
+          </div>
+
+          <div className="flex justify-center">
+            <button type="button" onClick={() => { setIsSigningUp(!isSigningUp); setError(null); }} className="text-sm text-purple-600 hover:text-purple-500">
+              {isSigningUp ? '已有账号？去登录' : '还没有账号？申请成为主播'}
+            </button>
           </div>
         </form>
       </div>
