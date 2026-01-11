@@ -43,38 +43,68 @@ export interface Database {
           }
         ]
       }
-      live_schedules: {
+      shops: {
         Row: {
           id: number
           country: string
-          shop_name: string
-          date: string
-          hour_slot: number
-          anchor_id: string | null
-          anchor_name: string | null
-          fans_added: number | null
+          name: string
+          platform: string | null
           created_at: string
         }
         Insert: {
           id?: number
           country: string
+          name: string
+          platform?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          country?: string
+          name?: string
+          platform?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      live_schedules: {
+        Row: {
+          id: number
+          country: string
+          shop_id: number | null
+          shop_name: string // 暂时保留以兼容旧代码
+          date: string
+          hour_slot: number
+          anchor_id: string | null
+          anchor_name: string | null
+          fans_added: number | null
+          mood: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          country: string
+          shop_id?: number | null
           shop_name: string
           date: string
           hour_slot: number
           anchor_id?: string | null
           anchor_name?: string | null
           fans_added?: number | null
+          mood?: string | null
           created_at?: string
         }
         Update: {
           id?: number
           country?: string
+          shop_id?: number | null
           shop_name?: string
           date?: string
           hour_slot?: number
           anchor_id?: string | null
           anchor_name?: string | null
           fans_added?: number | null
+          mood?: string | null
           created_at?: string
         }
         Relationships: [
@@ -82,6 +112,12 @@ export interface Database {
             foreignKeyName: "live_schedules_anchor_id_fkey"
             columns: ["anchor_id"]
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_schedules_shop_id_fkey"
+            columns: ["shop_id"]
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           }
         ]
@@ -122,6 +158,60 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      }
+      products: {
+        Row: {
+          id: number
+          sku: string
+          name: Json
+          size: Json | null
+          features: Json | null
+          main_image: string | null
+          pattern_images: string[] | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          sku: string
+          name: Json
+          size?: Json | null
+          features?: Json | null
+          main_image?: string | null
+          pattern_images?: string[] | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          sku?: string
+          name?: Json
+          size?: Json | null
+          features?: Json | null
+          main_image?: string | null
+          pattern_images?: string[] | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      live_hub: {
+        Row: {
+          id: number
+          category: string
+          data: Json
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          category: string
+          data: Json
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          category?: string
+          data?: Json
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

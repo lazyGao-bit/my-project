@@ -11,7 +11,8 @@ import {
   MessageSquare, 
   Mail, 
   Users,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen // 新增图标
 } from 'lucide-react';
 
 type UserProfile = Database['public']['Tables']['profiles']['Row'];
@@ -34,7 +35,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // 从 profiles 表获取用户详情和角色
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -58,17 +58,14 @@ export default function DashboardPage() {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">加载中...</div>;
 
-  // 简单的管理员判断逻辑 (实际生产中应完全依赖 profile.role)
   const isAdmin = profile?.role === 'admin' || profile?.email === 'gaojiaxin431@gmail.com' || profile?.email === '1771048910@qq.com';
   
   const navigateTo = (path: string) => {
-    alert(`即将跳转到功能模块: ${path} \n(该模块将在下一阶段开发)`);
-    // router.push(path); 
+    router.push(path);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 顶部导航 */}
       <nav className="bg-white shadow-sm border-b px-8 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="bg-purple-600 w-8 h-8 rounded flex items-center justify-center text-white font-bold">Y</div>
@@ -98,7 +95,6 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
-          {/* --- 核心功能区 --- */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/ai-tools')}>
             <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-100 transition">
               <Video className="w-6 h-6 text-blue-600" />
@@ -119,6 +115,17 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* 新增：直播指导手册 (原“意见反馈”旁边) */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/guide')}>
+            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-100 transition">
+              <BookOpen className="w-6 h-6 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">直播指导手册</h3>
+            <p className="text-sm text-gray-500">
+              查看最新的规章制度、活动通知和操作流程。
+            </p>
+          </div>
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/feedback')}>
             <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-100 transition">
               <MessageSquare className="w-6 h-6 text-orange-600" />
@@ -129,26 +136,15 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* --- 管理员专属区 --- */}
           {isAdmin && (
             <>
-              <div className="bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-700 hover:border-zinc-500 transition cursor-pointer group" onClick={() => navigateTo('/admin/users')}>
+              <div className="bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-700 hover:border-zinc-500 transition cursor-pointer group" onClick={() => navigateTo('/admin')}>
                 <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center mb-4 group-hover:bg-zinc-600 transition">
-                  <Users className="w-6 h-6 text-purple-400" />
+                  <ShieldAlert className="w-6 h-6 text-purple-400" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">主播管理</h3>
+                <h3 className="text-lg font-bold text-white mb-2">高级管理后台</h3>
                 <p className="text-sm text-gray-400">
-                  管理主播档案、查看增粉数据报表。
-                </p>
-              </div>
-
-              <div className="bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-700 hover:border-zinc-500 transition cursor-pointer group" onClick={() => navigateTo('/admin/marketing')}>
-                <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center mb-4 group-hover:bg-zinc-600 transition">
-                  <Mail className="w-6 h-6 text-pink-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">邮件营销</h3>
-                <p className="text-sm text-gray-400">
-                  向特定国家的主播群发问卷调查或通知。
+                  进入超级管理员界面，管理全站数据。
                 </p>
               </div>
             </>
