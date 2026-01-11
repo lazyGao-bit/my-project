@@ -4,17 +4,31 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
-    --foreground: #171717;
-    --font-geist-sans: "Geist", sans-serif;
-    --font-geist-mono: "Geist Mono", monospace;
+    --background: #fcfbf9;
+    --foreground: #443d3a;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #0a0a0a;
-      --foreground: #ededed;
-    }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 自定义滚动条：极简风格 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e5e1d9;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #d4cfc1;
   }
 }
 
@@ -23,24 +37,4 @@
     src: url('https://assets.vercel.com/raw/upload/v1587415301/fonts/2/Geist-Regular.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
-}
-
-@font-face {
-    font-family: 'Geist';
-    src: url('https://assets.vercel.com/raw/upload/v1587415301/fonts/2/Geist-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Geist Mono';
-    src: url('https://assets.vercel.com/raw/upload/v1587415301/fonts/2/GeistMono-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans);
 }
