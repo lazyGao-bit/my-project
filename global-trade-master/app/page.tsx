@@ -5,9 +5,8 @@ import Link from "next/link";
 import { cookies } from 'next/headers';
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import HeroProductBg from "./components/HeroProductBg"; 
-import ProductCarousel from "./components/ProductCarousel"; // 引入轮播组件
+import ProductCarousel from "./components/ProductCarousel";
 
-// --- 页面文案内容 ---
 const pageContent = {
   nav: {
     login: "主播/管理员登录",
@@ -33,7 +32,7 @@ const pageContent = {
       { year: '2011', title: '匠心起源', desc: 'YYT 的故事始于“丝绸之府”浙江湖州。我们深耕蚊帐产品的线下外贸出口，迈出了从0到1的第一步。' },
       { year: '2013', title: '电商转型', desc: '在淘宝上架首款产品，收获来自大学生的第一笔订单，坚定了我们直接服务消费者的决心。' },
       { year: '2016', title: '走向世界', desc: '组建国际贸易团队，足迹远至非洲与东南亚，在 B2B 市场占据一席之地。' },
-      { year: '2019', title: '深耕本土', desc: '年销售额突破3亿元，跻身湖州电商企业 TOP3，成为行业领军力量。' },
+      { year: '2019', title: '深耕本土', desc: '年销售额突破3亿元，跻身湖州电商企业 TOP3，成为行业领领军力量。' },
       { year: '2020', title: '全域爆发', desc: '建立多地区生产基地，构建多品牌矩阵，全面覆盖国内主流电商平台。' },
       { year: '2024', title: '全球零售新篇章', desc: '依托 TikTok、Shopee 等国际平台，深入东南亚及日韩市场，直接对话全球消费者。' },
     ],
@@ -50,7 +49,6 @@ const pageContent = {
   }
 };
 
-// 翻译逻辑
 async function translateText(text: string, targetLang: string) {
   const apiUrl = 'https://translator-api.gaojiaxin431.workers.dev';
   const isChinese = /[\u4e00-\u9fa5]/.test(text);
@@ -69,6 +67,7 @@ async function translateText(text: string, targetLang: string) {
 }
 
 async function translateObject<T extends Record<string, any>>(obj: T, lang: string): Promise<T> {
+  if (!obj) return obj;
   const translatedObj = { ...obj };
   for (const key in translatedObj) {
     const value = translatedObj[key];
@@ -104,7 +103,6 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <div className="bg-[#fcfbf9] text-[#443d3a] selection:bg-[#fdf3e7] selection:text-[#9e8a78] font-sans overflow-x-hidden">
       
-      {/* 顶部导航 */}
       <header className="fixed inset-x-0 top-0 z-50 bg-[#fcfbf9]/80 backdrop-blur-xl border-b border-stone-100/50 transition-all duration-300">
         <nav className="flex items-center justify-between p-6 lg:px-12 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3 group cursor-pointer">
@@ -206,7 +204,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        {/* 4. Product Gallery (嵌入轮播组件) */}
+        {/* 4. Product Gallery */}
         <section className="py-40 bg-[#f5f3ef]">
            <div className="max-w-screen-2xl mx-auto px-6">
              <div className="bg-white rounded-[4rem] p-12 md:p-24 shadow-magazine flex flex-col lg:flex-row items-center gap-20 relative overflow-hidden">
@@ -228,7 +226,6 @@ export default async function Home({ searchParams }: HomePageProps) {
                  </Link>
                </div>
                
-               {/* 替换点：使用 ProductCarousel 组件 */}
                <div className="flex-1 w-full">
                   <ProductCarousel />
                </div>
@@ -240,7 +237,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <footer className="py-24 border-t border-stone-200/50 text-center bg-[#fcfbf9]">
         <div className="max-w-md mx-auto space-y-8">
            <div className="text-3xl font-serif italic text-[#443d3a] tracking-wide">YYT Global</div>
-           <p className="text-sm font-bold tracking-widest text-stone-400 uppercase">© {new Date().getFullYear()} {content.footer.rights}</p>
+           <p className="text-sm font-bold tracking-widest text-stone-400 uppercase">© 2026 {content.footer.rights}</p>
         </div>
       </footer>
     </div>

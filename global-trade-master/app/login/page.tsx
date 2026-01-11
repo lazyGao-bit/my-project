@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import type { Database } from '../../lib/database.types';
 import { LoaderCircle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from '../../lib/useTranslation';
+import { updateLoginTrace } from '../../lib/logger'; // 引入追踪工具
 
 const defaultContent = {
+  // ... (之前的文案保持不变)
   title_login: "登录工作台",
   title_signup: "申请加入 YYT",
   subtitle_login: "全球领先的跨境直播电商平台",
@@ -32,14 +34,12 @@ const defaultContent = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { t, loading: transLoading } = useTranslation(defaultContent);
-  
+  const { t } = useTranslation(defaultContent);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState(''); 
   const [country, setCountry] = useState('vietnam'); 
   const [adminCode, setAdminCode] = useState('');
-  
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,32 +58,25 @@ export default function LoginPage() {
       if (isSigningUp) {
         if (!username.trim()) throw new Error(t.error_name_required);
         const assignedRole = adminCode.trim() === '20260574' ? 'admin' : 'creator';
-
         const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { username, role: assignedRole, country }
-          }
+          email, password,
+          options: { data: { username, role: assignedRole, country } }
         });
-
         if (authError) throw authError;
-
         if (authData.user) {
           await supabase.from('profiles').upsert({
-            id: authData.user.id,
-            email,
-            username,
-            country,
-            role: assignedRole
+            id: authData.user.id, email, username, country, role: assignedRole
           });
         }
-
         alert(assignedRole === 'admin' ? t.msg_success_admin : t.msg_success_creator);
         setIsSigningUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        
+        // --- 核心改动：记录登录轨迹 ---
+        await updateLoginTrace(); 
+        
         router.push('/dashboard');
       }
     } catch (err: any) {
@@ -94,6 +87,7 @@ export default function LoginPage() {
   };
 
   return (
+    // ... (UI 部分保持不变，略)
     <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-[2rem] shadow-magazine border border-stone-100">
         <div>
@@ -109,48 +103,40 @@ export default function LoginPage() {
           <div className="space-y-5">
             <div>
                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{t.label_email}</label>
-               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-200 placeholder-stone-300 text-brand-coffee focus:outline-none focus:ring-2 focus:ring-brand-creamy focus:border-brand-warm transition-all" placeholder="you@example.com" />
+               <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-200 placeholder-stone-300 text-brand-coffee focus:outline-none focus:ring-2" placeholder="you@example.com" />
             </div>
-
             <div>
                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{t.label_password}</label>
-               <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-200 placeholder-stone-300 text-brand-coffee focus:outline-none focus:ring-2 focus:ring-brand-creamy focus:border-brand-warm transition-all" placeholder={t.placeholder_password} minLength={6} />
+               <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-200 placeholder-stone-300 text-brand-coffee focus:outline-none focus:ring-2" placeholder={t.placeholder_password} minLength={6} />
             </div>
-
             {isSigningUp && (
-              <div className="space-y-5 animate-fade-in">
+              <div className="space-y-5">
                 <div className="bg-brand-apricot/30 p-4 rounded-2xl border border-brand-apricot">
                   <label className="block text-xs font-bold text-brand-warm uppercase tracking-widest mb-2">{t.label_name}</label>
-                  <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-brand-apricot bg-white placeholder-stone-300 text-brand-coffee focus:outline-none focus:ring-2 focus:ring-brand-apricot" placeholder={t.placeholder_name} />
+                  <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-brand-apricot bg-white placeholder-stone-300 text-brand-coffee focus:outline-none" placeholder={t.placeholder_name} />
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{t.label_country}</label>
-                  <select value={country} onChange={e => setCountry(e.target.value)} className="block w-full px-4 py-3 border border-stone-200 bg-white rounded-xl text-brand-coffee focus:outline-none focus:ring-2 focus:ring-brand-creamy">
+                  <select value={country} onChange={e => setCountry(e.target.value)} className="block w-full px-4 py-3 border border-stone-200 bg-white rounded-xl text-brand-coffee focus:outline-none">
                     <option value="vietnam">🇻🇳 Vietnam</option>
                     <option value="thailand">🇹🇭 Thailand</option>
                     <option value="malaysia">🇲🇾 Malaysia</option>
                     <option value="philippines">🇵🇭 Philippines</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-stone-300 uppercase tracking-widest mb-2 flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> {t.label_admin_code}
                   </label>
-                  <input type="text" value={adminCode} onChange={e => setAdminCode(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-100 placeholder-stone-200 text-brand-coffee focus:outline-none focus:ring-2 focus:ring-brand-creamy" placeholder={t.placeholder_admin_code} />
-                  <p className="text-[10px] text-stone-400 mt-2 italic leading-relaxed">{t.admin_code_tip}</p>
+                  <input type="text" value={adminCode} onChange={e => setAdminCode(e.target.value)} className="appearance-none rounded-xl relative block w-full px-4 py-3 border border-stone-100 placeholder-stone-200 text-brand-coffee focus:outline-none" placeholder={t.placeholder_admin_code} />
                 </div>
               </div>
             )}
           </div>
-
           {error && <div className="text-accent-500 text-xs font-bold text-center bg-rose-50 p-3 rounded-xl border border-rose-100">{error}</div>}
-
-          <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-sm font-bold rounded-full text-white bg-brand-coffee hover:bg-stone-700 focus:outline-none shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50">
+          <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-sm font-bold rounded-full text-white bg-brand-coffee hover:bg-stone-700 focus:outline-none shadow-xl transition-all disabled:opacity-50">
             {loading ? <LoaderCircle className="animate-spin" /> : (isSigningUp ? t.btn_signup : t.btn_login)}
           </button>
-
           <div className="flex justify-center">
             <button type="button" onClick={() => { setIsSigningUp(!isSigningUp); setError(null); }} className="text-xs font-bold text-stone-400 hover:text-brand-coffee uppercase tracking-widest transition-colors">
               {isSigningUp ? t.link_to_login : t.link_to_signup}
