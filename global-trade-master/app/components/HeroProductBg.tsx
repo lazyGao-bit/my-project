@@ -17,12 +17,12 @@ export default function HeroProductBg() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // 随机获取一些有图片的产品
+      // 随机获取有图片的产品，限制数量
       const { data } = await supabase
         .from('products')
         .select('sku, main_image')
         .not('main_image', 'is', null)
-        .limit(12);
+        .limit(18); // 获取多一点以填充屏幕
       
       if (data) {
         setProducts(data as any);
@@ -33,49 +33,52 @@ export default function HeroProductBg() {
 
   // 将产品分成3列显示
   const columns = [
-    products.slice(0, 4),
-    products.slice(4, 8),
-    products.slice(8, 12),
+    products.slice(0, 6),
+    products.slice(6, 12),
+    products.slice(12, 18),
   ];
 
-  return (
-    <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none">
-      {/* 阳光与窗帘的氛围层 - 覆盖在图片之上，制造朦胧感 */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#fcfbf9]/80 via-[#fcfbf9]/60 to-[#fcfbf9] backdrop-blur-[2px]"></div>
-      
-      {/* 暖色光晕 */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-orange-100/30 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 z-0"></div>
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-amber-50/40 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4 z-0"></div>
+  if (products.length === 0) return null;
 
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden select-none h-full">
+      {/* 氛围遮罩层：核心修改点 */}
+      {/* 使用 #fcfbf9 (品牌奶油色) 进行渐变遮罩，确保文字可读性 */}
+      <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#fcfbf9]/95 via-[#fcfbf9]/70 to-[#fcfbf9] pointer-events-none"></div>
+      
       {/* 动态产品瀑布流 */}
-      <div className="flex justify-between gap-8 h-[120%] -mt-10 px-4 md:px-20 opacity-40 grayscale-[20%] hover:grayscale-0 transition-all duration-1000">
+      <div className="grid grid-cols-3 gap-4 md:gap-8 h-[150%] -mt-20 px-2 md:px-20 opacity-50">
         {columns.map((col, colIndex) => (
-          <div key={colIndex} className="flex flex-col gap-8 w-1/3">
+          <div key={colIndex} className="flex flex-col gap-6 md:gap-8 w-full">
             {col.map((product, idx) => (
               <motion.div
-                key={product.sku}
+                key={`${product.sku}-${idx}`}
                 initial={{ y: 0 }}
-                animate={{ y: colIndex % 2 === 0 ? -100 : 0 }} // 简单的视差位移
+                animate={{ 
+                  y: colIndex % 2 === 0 ? [-20, -100] : [-100, -20] // 奇偶列反向移动，制造视差
+                }} 
                 transition={{ 
-                  duration: 20 + idx * 5, 
+                  duration: 25 + idx * 3, 
                   repeat: Infinity, 
                   repeatType: "reverse", 
                   ease: "linear" 
                 }}
-                className="relative aspect-[3/4] w-full rounded-[2rem] overflow-hidden pointer-events-auto cursor-pointer group"
+                className="relative aspect-[3/4] w-full rounded-2xl md:rounded-[2rem] overflow-hidden group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-500 z-10"
               >
-                <Link href="/products" className="block w-full h-full">
+                <Link href="/products" className="block w-full h-full relative">
                     {product.main_image && (
                         <Image
-                        src={product.main_image}
-                        alt={product.sku}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        sizes="(max-width: 768px) 33vw, 20vw"
+                          src={product.main_image}
+                          alt={product.sku}
+                          fill
+                          className="object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700 ease-out"
+                          sizes="(max-width: 768px) 33vw, 20vw"
                         />
                     )}
-                    {/* 悬停时的遮罩 */}
-                    <div className="absolute inset-0 bg-[#443d3a]/0 group-hover:bg-[#443d3a]/10 transition-colors duration-300"></div>
+                    {/* 悬停时的点击提示遮罩 */}
+                    <div className="absolute inset-0 bg-[#443d3a]/0 group-hover:bg-[#443d3a]/5 transition-colors duration-300 flex items-center justify-center">
+                        <span className="text-white opacity-0 group-hover:opacity-100 font-bold tracking-widest text-sm transition-opacity bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/30">View</span>
+                    </div>
                 </Link>
               </motion.div>
             ))}

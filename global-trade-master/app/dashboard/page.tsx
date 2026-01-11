@@ -5,20 +5,56 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { Database } from '../../lib/database.types';
 import { 
-  LayoutDashboard, 
-  Video, 
-  CalendarDays, 
-  MessageSquare, 
-  Mail, 
-  Users,
-  ShieldAlert,
-  BookOpen // 新增图标
+  Video, CalendarDays, MessageSquare, Mail, ShieldAlert, BookOpen, LogOut, Sparkles
 } from 'lucide-react';
+import { useTranslation } from '../../lib/useTranslation';
+
+// --- 全量静态文案定义 (默认中文) ---
+const defaultContent = {
+  nav: {
+    title: "YYT 工作台",
+    role_creator: "主播",
+    role_admin: "管理员",
+    country_global: "全球",
+    btn_logout: "退出"
+  },
+  header: {
+    badge: "Live Dashboard", // 英文通常保留作为装饰
+    welcome: "欢迎回来",
+    ready: "准备好开始今天的直播了吗？",
+    admin_mode: "管理员模式"
+  },
+  modules: {
+    ai: {
+      title: "AI 内容生成",
+      desc: "利用 LLM 生成短视频文案、直播脚本和多维度产品介绍。"
+    },
+    schedule: {
+      title: "直播排班表",
+      desc: "查看您的排班时间。管理员可在此进行排班管理。"
+    },
+    guide: {
+      title: "直播指导手册",
+      desc: "查看最新的规章制度、活动通知和操作流程。"
+    },
+    feedback: {
+      title: "意见反馈区",
+      desc: "提交直播问题、样品申请或建议。查看公示回复。"
+    },
+    admin_portal: {
+      title: "高级管理后台",
+      desc: "进入超级管理员界面，管理全站数据。"
+    }
+  }
+};
 
 type UserProfile = Database['public']['Tables']['profiles']['Row'];
 
 export default function DashboardPage() {
   const router = useRouter();
+  // 使用 useTranslation Hook 获取翻译后的内容
+  const { t, loading: transLoading } = useTranslation(defaultContent);
+  
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,22 +66,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        setProfile(data);
-      }
+      if (!user) { router.push('/login'); return; }
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (data) setProfile(data);
       setLoading(false);
     };
     fetchProfile();
@@ -56,102 +79,86 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">加载中...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-coffee"></div>
+    </div>
+  );
 
   const isAdmin = profile?.role === 'admin' || profile?.email === 'gaojiaxin431@gmail.com' || profile?.email === '1771048910@qq.com';
   
-  const navigateTo = (path: string) => {
-    router.push(path);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b px-8 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="bg-purple-600 w-8 h-8 rounded flex items-center justify-center text-white font-bold">Y</div>
-          <span className="font-bold text-gray-800">YYT 工作台</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-             <div className="text-sm font-bold text-gray-900">{profile?.username || profile?.email}</div>
-             <div className="text-xs text-gray-500 capitalize">{profile?.role || 'Creator'} | {profile?.country || 'Global'}</div>
+    <div className="min-h-screen bg-[#fcfbf9] text-brand-coffee selection:bg-brand-apricot">
+      {/* 顶部导航 */}
+      <nav className="bg-white/80 backdrop-blur-md border-b border-stone-100 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="bg-brand-coffee w-9 h-9 rounded-full flex items-center justify-center text-white shadow-lg">
+             <span className="font-serif font-bold text-lg italic">Y</span>
           </div>
-          <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-800 border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition">退出</button>
+          <span className="font-bold tracking-widest text-brand-coffee uppercase text-sm">{t.nav.title}</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="text-right hidden sm:block">
+             <div className="text-sm font-bold text-brand-coffee">{profile?.username || profile?.email}</div>
+             <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+               {profile?.role === 'admin' ? t.nav.role_admin : t.nav.role_creator} | {profile?.country || t.nav.country_global}
+             </div>
+          </div>
+          <button onClick={handleLogout} className="flex items-center gap-2 text-xs font-bold text-accent-500 hover:text-accent-600 bg-rose-50 px-5 py-2.5 rounded-full transition-all border border-rose-100 shadow-sm">
+            <LogOut size={14} /> {t.nav.btn_logout}
+          </button>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-8 py-12">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {isAdmin ? '管理员控制中心' : '主播工作台'}
+      <main className="max-w-7xl mx-auto px-8 py-16">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 bg-brand-apricot text-brand-warm text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-tighter shadow-sm border border-brand-creamy">
+               <Sparkles size={12} className="animate-pulse" /> {t.header.badge}
+            </div>
+            <h1 className="text-5xl font-serif font-bold text-brand-coffee tracking-tight">
+              {t.header.welcome}, {profile?.username || 'User'}
             </h1>
-            <p className="text-gray-500 mt-2">欢迎回来，准备好开始今天的直播了吗？</p>
+            <p className="text-stone-400 font-medium italic text-lg">{t.header.ready}</p>
           </div>
           {isAdmin && (
-             <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded border border-purple-200">Admin Mode</span>
+             <div className="bg-brand-coffee text-[#fcfbf9] text-[10px] font-bold px-5 py-2 rounded-full shadow-2xl animate-pulse tracking-widest uppercase flex items-center gap-2">
+                <ShieldAlert size={12} /> {t.header.admin_mode}
+             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/ai-tools')}>
-            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-100 transition">
-              <Video className="w-6 h-6 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">AI 内容生成</h3>
-            <p className="text-sm text-gray-500">
-              利用 LLM 生成短视频文案、直播脚本和多维度产品介绍。
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/schedule')}>
-            <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-100 transition">
-              <CalendarDays className="w-6 h-6 text-green-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">直播排班表</h3>
-            <p className="text-sm text-gray-500">
-              查看您的排班时间。{isAdmin ? '管理员可在此进行排班管理。' : '在此登记增粉数据。'}
-            </p>
-          </div>
-
-          {/* 新增：直播指导手册 (原“意见反馈”旁边) */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/guide')}>
-            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-100 transition">
-              <BookOpen className="w-6 h-6 text-purple-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">直播指导手册</h3>
-            <p className="text-sm text-gray-500">
-              查看最新的规章制度、活动通知和操作流程。
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group" onClick={() => navigateTo('/feedback')}>
-            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-100 transition">
-              <MessageSquare className="w-6 h-6 text-orange-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">意见反馈区</h3>
-            <p className="text-sm text-gray-500">
-              提交直播问题、样品申请或建议。查看公示回复。
-            </p>
-          </div>
+          <ModuleCard icon={Video} title={t.modules.ai.title} desc={t.modules.ai.desc} color="bg-blue-50" iconColor="text-blue-400" onClick={() => router.push('/ai-tools')} />
+          <ModuleCard icon={CalendarDays} title={t.modules.schedule.title} desc={t.modules.schedule.desc} color="bg-green-50" iconColor="text-green-400" onClick={() => router.push('/schedule')} />
+          <ModuleCard icon={BookOpen} title={t.modules.guide.title} desc={t.modules.guide.desc} color="bg-purple-50" iconColor="text-purple-400" onClick={() => router.push('/guide')} />
+          <ModuleCard icon={MessageSquare} title={t.modules.feedback.title} desc={t.modules.feedback.desc} color="bg-orange-50" iconColor="text-orange-400" onClick={() => router.push('/feedback')} />
 
           {isAdmin && (
-            <>
-              <div className="bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-700 hover:border-zinc-500 transition cursor-pointer group" onClick={() => navigateTo('/admin')}>
-                <div className="w-12 h-12 bg-zinc-700 rounded-lg flex items-center justify-center mb-4 group-hover:bg-zinc-600 transition">
-                  <ShieldAlert className="w-6 h-6 text-purple-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">高级管理后台</h3>
-                <p className="text-sm text-gray-400">
-                  进入超级管理员界面，管理全站数据。
-                </p>
+            <div className="bg-brand-coffee p-10 rounded-[2.5rem] shadow-2xl hover:shadow-glow hover:-translate-y-1 transition-all cursor-pointer group flex flex-col items-start border border-brand-warm" onClick={() => router.push('/admin')}>
+              <div className="w-16 h-16 bg-white/10 rounded-[1.5rem] flex items-center justify-center mb-8 group-hover:rotate-6 transition-transform border border-white/20 shadow-inner">
+                <ShieldAlert className="w-8 h-8 text-brand-creamy" />
               </div>
-            </>
+              <h3 className="text-2xl font-bold text-white mb-4 font-serif italic">{t.modules.admin_portal.title}</h3>
+              <p className="text-sm text-stone-300 leading-relaxed font-medium opacity-80">{t.modules.admin_portal.desc}</p>
+            </div>
           )}
 
         </div>
       </main>
     </div>
   );
+}
+
+function ModuleCard({ icon: Icon, title, desc, color, iconColor, onClick }: any) {
+    return (
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-magazine border border-stone-100 hover:shadow-2xl hover:border-brand-creamy hover:-translate-y-1 transition-all cursor-pointer group flex flex-col items-start" onClick={onClick}>
+            <div className={`w-16 h-16 ${color} rounded-[1.5rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-inner`}>
+              <Icon className={`w-8 h-8 ${iconColor}`} />
+            </div>
+            <h3 className="text-2xl font-bold text-brand-coffee mb-4 font-serif italic group-hover:translate-x-1 transition-transform">{title}</h3>
+            <p className="text-sm text-stone-400 leading-relaxed font-medium">{desc}</p>
+        </div>
+    );
 }

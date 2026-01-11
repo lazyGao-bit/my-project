@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "login": "主播/管理员登录",
+    "dashboard": "工作台",
+    "admin": "高级管理"
+  },
+  "hero": {
+    "title": "织造温暖，连接全球",
+    "description": "在 YYT，我们用匠心织造每一寸纤维。结合前沿 AI 与本土温度，我们致力于将极致舒适的家纺艺术，温柔地送达东南亚的每一个家庭。",
+    "cta_join": "开启旅程 (主播入驻)",
+    "cta_story": "我们的故事"
+  },
+  "guide": {
+    "header_admin": "内容发布中心",
+    "header_anchor": "直播指导手册",
+    "btn_publish": "发布新内容",
+    "policy": "规章制度",
+    "activity": "直播活动",
+    "tutorial": "操作流程",
+    "notice": "重要通知"
+  }
+}

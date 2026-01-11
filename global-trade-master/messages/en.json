@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "login": "Anchor/Admin Login",
+    "dashboard": "Dashboard",
+    "admin": "Admin Center"
+  },
+  "hero": {
+    "title": "Weaving Warmth, Connecting Globally",
+    "description": "At YYT, we weave every fiber with heart. Combining cutting-edge AI with local warmth, we deliver comfort to every home in SE Asia.",
+    "cta_join": "Join Us (Anchors)",
+    "cta_story": "Our Story"
+  },
+  "guide": {
+    "header_admin": "Content Hub",
+    "header_anchor": "Live Guidebook",
+    "btn_publish": "Publish Content",
+    "policy": "Policies",
+    "activity": "Live Activities",
+    "tutorial": "SOP Guides",
+    "notice": "Important Notices"
+  }
+}

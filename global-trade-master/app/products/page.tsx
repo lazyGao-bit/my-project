@@ -10,10 +10,31 @@ import {
 } from "lucide-react";
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '../../lib/database.types';
-import { smartTranslate, type TranslationSet } from '../../lib/translation';
+import { smartTranslate, translateObject, type TranslationSet } from '../../lib/translation'; // 引入通用翻译
 import * as XLSX from 'xlsx';
 
-// --- 类型定义 ---
+// --- UI 文案定义 (默认中文) ---
+const defaultUI = {
+  nav: {
+    back: "返回首页",
+    title: "YYT 产品库",
+    adminMode: "管理员模式",
+    import: "导入Excel",
+    clear: "清空库",
+    mode_admin: "管理员",
+    mode_anchor: "主播模式"
+  },
+  search: {
+    placeholder: "搜索 SKU 或产品名称...",
+    empty: "暂无产品数据"
+  },
+  card: {
+    size: "Size",
+    features: "Features",
+    view: "查看详情"
+  }
+};
+
 type Product = {
   id?: number; 
   sku: string; 
@@ -24,29 +45,22 @@ type Product = {
   features: TranslationSet;
 };
 
-// 管理员白名单
 const ADMIN_EMAILS = ['gaojiaxin431@gmail.com', 'admin@example.com', '1771048910@qq.com'];
 
-// ==========================================
-// 组件: 图片上传器
-// ==========================================
+// ... (ImageUploader 组件保持不变，省略以节省空间，但在写入时会保留) ...
 const ImageUploader = ({ src, onUpload, onDelete, onZoom, isMain = false, className = "", isAdmin }: any) => {
   const [uploading, setUploading] = useState(false);
-  
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
     await onUpload(e.target.files[0]);
     setUploading(false);
   };
-
   if (!isAdmin && !src) return null;
-
   return (
     <div className={`relative group ${isMain ? 'w-full h-64' : 'w-20 h-20 flex-shrink-0'} ${className}`}>
       {src ? (
         <>
-          {/* 修复：使用 object-contain 确保花型图片完整显示，不被裁剪 */}
           <img src={src} className={`w-full h-full ${isMain ? 'object-cover rounded-t-2xl' : 'object-cover rounded-lg border border-slate-200'}`} />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
              {onZoom && <button onClick={(e) => { e.stopPropagation(); onZoom(src); }} className="bg-white/90 p-1.5 rounded-full hover:text-blue-600"><Maximize2 className="w-3 h-3" /></button>}
@@ -63,10 +77,7 @@ const ImageUploader = ({ src, onUpload, onDelete, onZoom, isMain = false, classN
   );
 };
 
-// ==========================================
-// 组件: 产品卡片
-// ==========================================
-const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageUpload, setZoomImg, refreshData }: any) => {
+const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageUpload, setZoomImg, refreshData, uiText }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,7 +97,6 @@ const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageU
         </button>
       )}
 
-      {/* 主图 */}
       <div className="relative">
          <ImageUploader 
            src={p.mainImage} 
@@ -100,41 +110,34 @@ const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageU
       </div>
 
       <div className="p-5 flex-1 flex flex-col">
-         {/* 修复：移除 line-clamp-2，允许标题完整显示 */}
          <h3 className="font-bold text-slate-800 mb-3 text-lg leading-tight">
             {getLangText(p.name)}
          </h3>
 
          <div className="space-y-3 text-sm flex-1">
-            {/* 尺寸 */}
             <div className="bg-slate-50 p-2 rounded border border-slate-100">
-               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-1">Size</span>
+               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-1">{uiText.card.size}</span>
                <p className="text-slate-700">{getLangText(p.size)}</p>
             </div>
             
-            {/* 特点 (可展开) */}
             <div 
               className={`bg-slate-50 p-2 rounded border border-slate-100 transition-all cursor-pointer hover:bg-purple-50/30 group/feat`}
               onClick={() => setIsExpanded(!isExpanded)}
             >
                <div className="flex justify-between items-center mb-1">
-                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Features</span>
+                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{uiText.card.features}</span>
                  <span className="text-[10px] text-purple-400 flex items-center gap-1 opacity-0 group-hover/feat:opacity-100 transition-opacity">
                     {isExpanded ? <ChevronUp className="w-3 h-3"/> : <ChevronDown className="w-3 h-3"/>}
                  </span>
                </div>
-               {/* 依然保留 expand 逻辑，但默认显示更多行 */}
                <p className={`text-slate-600 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
                   {getLangText(p.features)}
                </p>
             </div>
          </div>
 
-         {/* 附图 */}
-         {/* 修复：允许横向滚动，增加内边距防止阴影被切 */}
          <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-               {/* 确保 patternImages 是数组 */}
                {Array.isArray(p.patternImages) && p.patternImages.map((img: string, idx: number) => (
                   <ImageUploader 
                     key={idx} 
@@ -155,9 +158,6 @@ const ProductCard = ({ p, activeLang, isAdmin, handleDeleteProduct, handleImageU
   );
 };
 
-// ==========================================
-// 主页面组件
-// ==========================================
 export default function ProductsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -166,11 +166,27 @@ export default function ProductsPage() {
   const [activeLang, setActiveLang] = useState<keyof TranslationSet>('CN');
   const [zoomImg, setZoomImg] = useState<string | null>(null);
   const [progress, setProgress] = useState("");
+  
+  // 新增：UI文案状态
+  const [uiText, setUiText] = useState(defaultUI);
 
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  // 监听语言变化，翻译UI
+  useEffect(() => {
+    const updateUI = async () => {
+      if (activeLang === 'CN') {
+        setUiText(defaultUI);
+      } else {
+        const translated = await translateObject(defaultUI, activeLang.toLowerCase());
+        setUiText(translated);
+      }
+    };
+    updateUI();
+  }, [activeLang]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -187,20 +203,11 @@ export default function ProductsPage() {
     const { data, error } = await supabase.from('products').select('*').order('id', {ascending: false});
     if (data) { 
       const formatted = data.map((p: any) => {
-        // --- 核心修复：更强健的 JSON 解析逻辑 ---
         let patterns = p.pattern_images || [];
-        // 如果数据库里存的是字符串（例如 "[url1, url2]"），尝试解析它
         if (typeof patterns === 'string') {
-            try {
-                patterns = JSON.parse(patterns);
-            } catch (e) {
-                // 如果解析失败，可能是单个 URL 字符串，尝试直接包装成数组，或者置空
-                if (patterns.startsWith('http')) {
-                    patterns = [patterns];
-                } else {
-                    console.error(`Failed to parse pattern_images for ${p.sku}:`, patterns);
-                    patterns = [];
-                }
+            try { patterns = JSON.parse(patterns); } catch (e) {
+                if (patterns.startsWith('http')) patterns = [patterns];
+                else patterns = [];
             }
         }
         
@@ -208,7 +215,7 @@ export default function ProductsPage() {
           id: p.id,
           sku: p.sku,
           mainImage: p.main_image || '',
-          patternImages: Array.isArray(patterns) ? patterns : [], // 确保一定是数组
+          patternImages: Array.isArray(patterns) ? patterns : [],
           name: p.name || {},
           size: p.size || {},
           features: p.features || {}
@@ -310,9 +317,9 @@ export default function ProductsPage() {
             </Link>
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <ShoppingBag className="w-6 h-6 text-purple-600" />
-              YYT 产品库
+              {uiText.nav.title}
             </h1>
-            {isAdmin && <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-bold">管理员模式</span>}
+            {isAdmin && <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-bold">{uiText.nav.adminMode}</span>}
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto">
@@ -331,7 +338,7 @@ export default function ProductsPage() {
             {isAdmin && (
               <div className="flex items-center gap-2">
                  <div className="relative">
-                    <input type="file" onChange={handleExcelUpload} className="absolute inset-0 opacity-0 cursor-pointer w-8" title="导入Excel" disabled={loading} />
+                    <input type="file" onChange={handleExcelUpload} className="absolute inset-0 opacity-0 cursor-pointer w-8" title={uiText.nav.import} disabled={loading} />
                     <button className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200 transition" disabled={loading}>
                        {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <FileSpreadsheet className="w-5 h-5"/>}
                     </button>
@@ -361,7 +368,7 @@ export default function ProductsPage() {
              value={searchTerm}
              onChange={e => setSearchTerm(e.target.value)}
              className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-200 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-             placeholder="搜索 SKU 或产品名称..."
+             placeholder={uiText.search.placeholder}
            />
         </div>
 
@@ -379,13 +386,14 @@ export default function ProductsPage() {
                   handleImageUpload={handleImageUpload}
                   setZoomImg={setZoomImg}
                   refreshData={fetchProducts}
+                  uiText={uiText} 
                 />
               ))}
            </div>
         )}
         
         {!loading && filteredProducts.length === 0 && (
-          <div className="text-center py-20 text-gray-400">暂无产品数据</div>
+          <div className="text-center py-20 text-gray-400">{uiText.search.empty}</div>
         )}
       </main>
 

@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "login": "Đăng nhập Chủ phòng/Quản trị",
+    "dashboard": "Bảng điều khiển",
+    "admin": "Quản trị cao cấp"
+  },
+  "hero": {
+    "title": "Dệt nên sự ấm áp, kết nối toàn cầu",
+    "description": "Tại YYT, chúng tôi dệt từng sợi vải bằng cả trái tim. Kết hợp AI tiên tiến với sự thấu hiểu địa phương, chúng tôi mang đến sự thoải mái tột cùng cho mọi gia đình Đông Nam Á.",
+    "cta_join": "Bắt đầu hành trình (Gia nhập Chủ phòng)",
+    "cta_story": "Câu chuyện của chúng tôi"
+  },
+  "guide": {
+    "header_admin": "Trung tâm phát hành nội dung",
+    "header_anchor": "Sổ tay hướng dẫn livestream",
+    "btn_publish": "Phát hành nội dung mới",
+    "policy": "Quy định & Thể lệ",
+    "activity": "Hoạt động Livestream",
+    "tutorial": "Quy trình vận hành",
+    "notice": "Thông báo quan trọng"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "login": "Log Masuk Hos/Admin",
+    "dashboard": "Papan Pemuka",
+    "admin": "Pusat Admin"
+  },
+  "hero": {
+    "title": "Menenun Kehangatan, Menghubungkan Dunia",
+    "description": "Di YYT, kami menenun setiap serat dengan hati. Menggabungkan AI canggih dengan kehangatan tempatan, kami menyampaikan keselesaan kepada setiap rumah di Asia Tenggara.",
+    "cta_join": "Sertai Kami (Hos)",
+    "cta_story": "Kisah Kami"
+  },
+  "guide": {
+    "header_admin": "Pusat Kandungan",
+    "header_anchor": "Panduan Siaran Langsung",
+    "btn_publish": "Terbitkan Kandungan",
+    "policy": "Polisi & Peraturan",
+    "activity": "Aktiviti Langsung",
+    "tutorial": "Panduan Operasi",
+    "notice": "Notis Penting"
+  }
+}

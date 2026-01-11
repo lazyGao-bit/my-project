@@ -12,7 +12,8 @@ import {
   ArrowLeft, 
   ShieldCheck, 
   Settings,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 
 // 管理员白名单
@@ -56,7 +57,6 @@ export default function AdminPage() {
   };
 
   const navigateTo = (path: string) => {
-    // router.push(path);
     alert(`功能开发中: ${path}`);
   };
 
@@ -136,7 +136,6 @@ export default function AdminPage() {
             </p>
           </div>
 
-          {/* 内容发布 - 链接已更新 */}
           <div 
             onClick={() => router.push('/guide')}
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
@@ -151,15 +150,15 @@ export default function AdminPage() {
           </div>
 
           <div 
-            onClick={() => navigateTo('/admin/marketing')}
+            onClick={() => router.push('/admin/feedback')}
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-pink-200 transition-all cursor-pointer group"
           >
             <div className="w-12 h-12 bg-pink-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-pink-100 transition">
-              <Mail className="w-6 h-6 text-pink-600" />
+              <MessageSquare className="w-6 h-6 text-pink-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-pink-700">邮件自动营销</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-pink-700">反馈工单管理</h3>
             <p className="text-sm text-gray-500">
-              创建问卷调查，向特定国家主播群发邮件，查看反馈统计。
+              处理主播提交的样品申请、直播问题和售后反馈。
             </p>
           </div>
 
@@ -176,16 +175,17 @@ export default function AdminPage() {
             </p>
           </div>
 
+          {/* 将“系统设置”替换为“邮件营销中心” */}
           <div 
-            onClick={() => navigateTo('/admin/settings')}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-zinc-300 transition-all cursor-pointer group"
+            onClick={() => router.push('/admin/marketing')}
+            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
           >
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-gray-200 transition">
-              <Settings className="w-6 h-6 text-gray-600" />
+            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-100 transition">
+              <Mail className="w-6 h-6 text-purple-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-gray-700">系统设置</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-700">邮件营销中心</h3>
             <p className="text-sm text-gray-500">
-              配置系统参数，管理管理员权限，查看操作日志。
+              创建问卷调查，向特定国家的主播群发邮件。
             </p>
           </div>
 

@@ -2,9 +2,12 @@
 import { Globe, Users, TrendingUp, ShoppingBag, ArrowRight, Sun, Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from 'next/headers';
 import LanguageSwitcher from "./components/LanguageSwitcher";
+import HeroProductBg from "./components/HeroProductBg"; 
+import ProductCarousel from "./components/ProductCarousel"; // 引入轮播组件
 
-// 1. 文案内容
+// --- 页面文案内容 ---
 const pageContent = {
   nav: {
     login: "主播/管理员登录",
@@ -25,14 +28,17 @@ const pageContent = {
   },
   story: {
     subtitle: "Brand Heritage",
-    title: "一段关于温度的记忆",
+    title: "YYT 的进击之路",
     items: [
-      { year: '2020', title: '梦想萌芽', desc: '怀揣着“让家更温馨”的初心，YYT 在西子湖畔成立。' },
-      { year: '2021', title: '跨越山海', desc: '首个海外直播基地在胡志明市落成，开启东南亚温情探索。' },
-      { year: '2022', title: '触碰未来', desc: '自主研发 AI 智能选品，精准匹配每一个家庭的个性化需求。' },
-      { year: '2023', title: '全域绽放', desc: '足迹遍布新、马、泰、菲，成为千万家庭信赖的床品专家。' },
-      { year: '2024', title: '智启新章', desc: '全面融合 LLM，为每一件织物注入灵魂，开启智能家纺新纪元。' },
-    ]
+      { year: '2011', title: '匠心起源', desc: 'YYT 的故事始于“丝绸之府”浙江湖州。我们深耕蚊帐产品的线下外贸出口，迈出了从0到1的第一步。' },
+      { year: '2013', title: '电商转型', desc: '在淘宝上架首款产品，收获来自大学生的第一笔订单，坚定了我们直接服务消费者的决心。' },
+      { year: '2016', title: '走向世界', desc: '组建国际贸易团队，足迹远至非洲与东南亚，在 B2B 市场占据一席之地。' },
+      { year: '2019', title: '深耕本土', desc: '年销售额突破3亿元，跻身湖州电商企业 TOP3，成为行业领军力量。' },
+      { year: '2020', title: '全域爆发', desc: '建立多地区生产基地，构建多品牌矩阵，全面覆盖国内主流电商平台。' },
+      { year: '2024', title: '全球零售新篇章', desc: '依托 TikTok、Shopee 等国际平台，深入东南亚及日韩市场，直接对话全球消费者。' },
+    ],
+    vision_title: "未来愿景",
+    vision_desc: "从一顶蚊帐到全品类家纺，YYT 始终致力于成为家纺行业的领军者。我们将继续秉持“创新、成长、拼搏、为善”的价值观，为全球家庭创造更健康、更舒适的生活方式。"
   },
   product: {
     title: "极致选品，悦己生活",
@@ -44,7 +50,7 @@ const pageContent = {
   }
 };
 
-// 2. 翻译逻辑
+// 翻译逻辑
 async function translateText(text: string, targetLang: string) {
   const apiUrl = 'https://translator-api.gaojiaxin431.workers.dev';
   const isChinese = /[\u4e00-\u9fa5]/.test(text);
@@ -55,7 +61,7 @@ async function translateText(text: string, targetLang: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, source_lang: sourceLang, target_lang: targetLang }),
-      cache: 'no-store' 
+      cache: 'force-cache' 
     });
     const data = await response.json();
     return data.translated_text || text;
@@ -86,7 +92,10 @@ interface HomePageProps {
 }
 
 export default async function Home({ searchParams }: HomePageProps) {
-  const lang = typeof searchParams.lang === 'string' ? searchParams.lang : 'zh';
+  const cookieStore = cookies();
+  const cookieLang = cookieStore.get('NEXT_LOCALE')?.value;
+  const lang = (typeof searchParams.lang === 'string' ? searchParams.lang : cookieLang) || 'zh';
+  
   let content = pageContent;
   if (lang !== 'zh') { content = await translateObject(pageContent, lang); }
 
@@ -96,7 +105,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     <div className="bg-[#fcfbf9] text-[#443d3a] selection:bg-[#fdf3e7] selection:text-[#9e8a78] font-sans overflow-x-hidden">
       
       {/* 顶部导航 */}
-      <header className="fixed inset-x-0 top-0 z-50 bg-[#fcfbf9]/70 backdrop-blur-xl border-b border-stone-100/50 transition-all duration-300">
+      <header className="fixed inset-x-0 top-0 z-50 bg-[#fcfbf9]/80 backdrop-blur-xl border-b border-stone-100/50 transition-all duration-300">
         <nav className="flex items-center justify-between p-6 lg:px-12 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="w-10 h-10 bg-[#443d3a] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -114,30 +123,25 @@ export default async function Home({ searchParams }: HomePageProps) {
       </header>
 
       <main>
-        {/* 1. Hero Section: 模拟柔和晨光 */}
+        {/* 1. Hero Section */}
         <section className="relative min-h-screen flex items-center justify-center px-6 pt-20 overflow-hidden">
-          {/* 动态光晕 */}
-          <div className="absolute inset-0 -z-10 pointer-events-none">
-             <div className="absolute top-[10%] right-[15%] w-[600px] h-[600px] bg-orange-100/40 rounded-full blur-[120px] animate-pulse"></div>
-             <div className="absolute bottom-[20%] left-[10%] w-[500px] h-[500px] bg-amber-50/60 rounded-full blur-[100px]"></div>
-          </div>
-          
-          <div className="max-w-5xl mx-auto text-center space-y-12 relative z-10">
-            <div className="inline-flex items-center gap-2 bg-white/60 border border-stone-200/60 px-5 py-2 rounded-full text-stone-500 text-xs font-bold uppercase tracking-widest animate-fade-in shadow-sm backdrop-blur-md">
+          <HeroProductBg />
+          <div className="max-w-5xl mx-auto text-center space-y-12 relative z-30 pointer-events-none"> 
+            <div className="inline-flex items-center gap-2 bg-white/70 border border-stone-200/60 px-5 py-2 rounded-full text-stone-500 text-xs font-bold uppercase tracking-widest animate-fade-in shadow-sm backdrop-blur-md pointer-events-auto">
               <Sun className="w-3 h-3 text-orange-400" />
               Born for Comfort
             </div>
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter text-[#443d3a] leading-[1] animate-slide-up font-serif">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-[#443d3a] leading-[1.15] animate-slide-up font-serif drop-shadow-sm pointer-events-auto">
                {content.hero.title}
             </h1>
-            <p className="mt-8 text-xl md:text-2xl text-stone-500 max-w-3xl mx-auto leading-relaxed font-medium opacity-90 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <p className="mt-8 text-xl md:text-2xl text-stone-600 max-w-3xl mx-auto leading-relaxed font-medium opacity-95 animate-slide-up bg-[#fcfbf9]/40 backdrop-blur-md p-6 rounded-2xl shadow-soft pointer-events-auto" style={{ animationDelay: '0.2s' }}>
               {content.hero.description}
             </p>
-            <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-6 animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-6 animate-slide-up pointer-events-auto" style={{ animationDelay: '0.4s' }}>
               <Link href="/login" className="w-full sm:w-auto rounded-full bg-[#443d3a] px-12 py-5 text-sm font-bold text-white shadow-2xl hover:bg-stone-800 hover:scale-105 transition-all duration-500 uppercase tracking-widest">
                 {content.hero.cta_join}
               </Link>
-              <a href="#story" className="text-sm font-bold text-stone-600 hover:text-[#443d3a] flex items-center gap-2 group transition-colors px-6 py-4">
+              <a href="#story" className="text-sm font-bold text-stone-600 hover:text-[#443d3a] flex items-center gap-2 group transition-colors px-6 py-4 bg-white/40 rounded-full backdrop-blur-sm border border-white/20">
                 {content.hero.cta_story} 
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform duration-300" />
               </a>
@@ -145,8 +149,8 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        {/* 2. Stats Section: 干净透明的磨砂感 */}
-        <section className="py-32 bg-white/40 backdrop-blur-sm border-y border-stone-100/50">
+        {/* 2. Stats Section */}
+        <section className="py-32 bg-white/60 backdrop-blur-sm border-y border-stone-100/50 relative z-20">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
               {content.stats.items.map((stat) => {
@@ -167,10 +171,9 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        {/* 3. Heritage Section: 舒展的日记布局 */}
-        <section id="story" className="py-40 relative overflow-hidden">
+        {/* 3. Heritage Section */}
+        <section id="story" className="py-40 relative overflow-hidden bg-[#fcfbf9]">
           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-[#fdf3e7]/30 to-transparent rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
-          
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col lg:flex-row gap-24 items-start">
               <div className="lg:w-1/3 sticky top-32">
@@ -179,7 +182,6 @@ export default async function Home({ searchParams }: HomePageProps) {
                   {content.story.title}
                 </h2>
               </div>
-              
               <div className="lg:w-2/3 space-y-20">
                 {content.story.items.map((item, index) => (
                   <div key={index} className="flex gap-12 group">
@@ -191,18 +193,24 @@ export default async function Home({ searchParams }: HomePageProps) {
                     </div>
                   </div>
                 ))}
+                <div className="flex gap-12 group">
+                  <span className="text-4xl font-bold text-stone-200 group-hover:text-[#443d3a] transition-colors duration-700 font-serif pt-2">Future</span>
+                  <div className="space-y-4 relative">
+                     <div className="absolute -left-[53px] top-5 w-3 h-3 bg-stone-200 rounded-full group-hover:bg-[#443d3a] transition-colors duration-500"></div>
+                     <h3 className="text-2xl font-bold text-[#443d3a] group-hover:translate-x-2 transition-transform duration-500">{content.story.vision_title}</h3>
+                     <p className="text-lg text-stone-500 leading-relaxed max-w-xl font-medium">{content.story.vision_desc}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 4. Product Gallery: 高级橱窗感 */}
+        {/* 4. Product Gallery (嵌入轮播组件) */}
         <section className="py-40 bg-[#f5f3ef]">
            <div className="max-w-screen-2xl mx-auto px-6">
              <div className="bg-white rounded-[4rem] p-12 md:p-24 shadow-magazine flex flex-col lg:flex-row items-center gap-20 relative overflow-hidden">
-               {/* 背景装饰 */}
                <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-[#fdf3e7] rounded-full blur-[120px] opacity-70"></div>
-               
                <div className="flex-1 space-y-12 relative z-10">
                  <div className="w-14 h-14 bg-[#fffcf7] rounded-full flex items-center justify-center shadow-soft border border-stone-50">
                     <Heart className="w-6 h-6 text-[#e1c4a9]" fill="currentColor" />
@@ -220,17 +228,9 @@ export default async function Home({ searchParams }: HomePageProps) {
                  </Link>
                </div>
                
-               <div className="flex-1 w-full relative group perspective-1000">
-                  <div className="aspect-[4/5] bg-[#fcfbf9] rounded-[3rem] shadow-inner overflow-hidden flex items-center justify-center relative transform group-hover:rotate-y-6 transition-transform duration-700 border border-stone-100">
-                      {/* 这里可以放一张模拟产品质感的占位图 */}
-                      <ShoppingBag className="w-40 h-40 text-stone-200 group-hover:text-stone-300 transition-colors duration-700" />
-                      <div className="absolute inset-0 bg-gradient-to-tr from-[#443d3a]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                  </div>
-                  {/* 悬浮标签 */}
-                  <div className="absolute -bottom-10 -right-6 bg-white/80 backdrop-blur-md p-10 rounded-[2.5rem] shadow-magazine border border-white animate-bounce-slow">
-                     <span className="text-xs font-bold text-stone-400 uppercase tracking-widest block mb-2">New Arrivals</span>
-                     <span className="text-2xl font-serif font-bold text-[#443d3a] italic">2024 Collection</span>
-                  </div>
+               {/* 替换点：使用 ProductCarousel 组件 */}
+               <div className="flex-1 w-full">
+                  <ProductCarousel />
                </div>
              </div>
            </div>

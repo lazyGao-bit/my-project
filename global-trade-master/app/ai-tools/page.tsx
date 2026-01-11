@@ -5,8 +5,36 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Loader2, Wand2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { Database } from '../../lib/database.types';
+import { useTranslation } from '../../lib/useTranslation';
 
-// 类型定义
+const defaultUI = {
+  header_title: "AI 内容生成",
+  btn_back: "返回工作台",
+  
+  label_select_product: "选择产品",
+  placeholder_select: "-- 请选择产品 --",
+  loading_products: "加载产品库中...",
+  
+  label_select_pattern: "选择重点推荐花型 (可选)",
+  
+  label_target_market: "目标市场/语言",
+  
+  label_content_type: "内容类型",
+  type_live_script: "直播带货脚本",
+  type_short_video: "短视频文案",
+  
+  btn_generate: "立即生成内容",
+  btn_generating: "正在思考中...",
+  
+  result_title: "生成结果",
+  btn_copy: "复制全文",
+  btn_copied: "已复制",
+  
+  empty_state_title: "AI 助手就绪",
+  empty_state_desc: "请在左侧选择产品并配置参数，\nAI 将为您生成专属营销内容。"
+};
+
+// ... 类型定义保持不变
 type Product = {
   id: number;
   sku: string;
@@ -17,26 +45,26 @@ type Product = {
 };
 
 const COUNTRIES = [
-  { code: 'CN', name: '中国 (China)', icon: '🇨🇳' },
-  { code: 'VN', name: '越南 (Vietnam)', icon: '🇻🇳' },
-  { code: 'MY', name: '马来西亚 (Malaysia)', icon: '🇲🇾' },
-  { code: 'TH', name: '泰国 (Thailand)', icon: '🇹🇭' },
-  { code: 'US', name: '美国 (USA)', icon: '🇺🇸' },
-  { code: 'KR', name: '韩国 (Korea)', icon: '🇰🇷' },
+  { code: 'CN', name: 'China', icon: '🇨🇳' },
+  { code: 'VN', name: 'Vietnam', icon: '🇻🇳' },
+  { code: 'MY', name: 'Malaysia', icon: '🇲🇾' },
+  { code: 'TH', name: 'Thailand', icon: '🇹🇭' },
+  { code: 'US', name: 'USA', icon: '🇺🇸' },
+  { code: 'KR', name: 'Korea', icon: '🇰🇷' },
 ];
 
 export default function AIGeneratorPage() {
   const router = useRouter();
+  const { t: ui } = useTranslation(defaultUI);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   
-  // 表单状态
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedPatternIndex, setSelectedPatternIndex] = useState<number | null>(null);
   const [targetCountry, setTargetCountry] = useState('VN');
   const [contentType, setContentType] = useState<'live_script' | 'short_video'>('live_script');
   
-  // 生成状态
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState('');
   const [copied, setCopied] = useState(false);
@@ -46,12 +74,10 @@ export default function AIGeneratorPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. 加载产品列表
   useEffect(() => {
     const fetchProducts = async () => {
       const { data } = await supabase.from('products').select('id, sku, name, size, features, pattern_images');
       if (data) {
-        // 简单处理 pattern_images 可能为字符串的情况
         const parsedData = data.map((p: any) => ({
             ...p,
             pattern_images: Array.isArray(p.pattern_images) ? p.pattern_images : (typeof p.pattern_images === 'string' ? JSON.parse(p.pattern_images) : [])
@@ -63,15 +89,13 @@ export default function AIGeneratorPage() {
     fetchProducts();
   }, [supabase]);
 
-  // 2. 处理生成请求
   const handleGenerate = async () => {
     if (!selectedProduct) return;
     setGenerating(true);
-    setResult(''); // 清空上次结果
+    setResult('');
 
     try {
-      // 准备花型名称（这里假设花型图片没有名字，暂用索引代替，实际项目中建议给花型加 name 字段）
-      const patternName = selectedPatternIndex !== null ? `花型 #${selectedPatternIndex + 1}` : undefined;
+      const patternName = selectedPatternIndex !== null ? `Pattern #${selectedPatternIndex + 1}` : undefined;
 
       const response = await fetch('/api/ai/generate', {
         method: 'POST',
@@ -88,10 +112,9 @@ export default function AIGeneratorPage() {
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      
       setResult(data.result);
     } catch (error: any) {
-      alert('生成失败: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setGenerating(false);
     }
@@ -104,36 +127,37 @@ export default function AIGeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#fcfbf9] flex flex-col md:flex-row font-sans text-brand-coffee">
       {/* 左侧：配置区 */}
-      <div className="w-full md:w-1/3 bg-white border-r border-gray-200 p-6 overflow-y-auto h-screen sticky top-0">
-        <div className="flex items-center gap-2 mb-8 text-purple-600 cursor-pointer" onClick={() => router.push('/dashboard')}>
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-bold">返回工作台</span>
+      <div className="w-full md:w-1/3 bg-white border-r border-stone-100 p-8 overflow-y-auto h-screen sticky top-0 shadow-soft z-10">
+        <div className="flex items-center gap-2 mb-10 text-stone-400 hover:text-brand-coffee cursor-pointer transition-colors group" onClick={() => router.push('/dashboard')}>
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-bold text-sm tracking-wide uppercase">{ui.btn_back}</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <Wand2 className="w-6 h-6 text-purple-500" />
-          AI 内容生成
+        <h1 className="text-3xl font-serif font-bold italic text-brand-coffee mb-8 flex items-center gap-3">
+          <div className="bg-brand-apricot p-2 rounded-xl">
+             <Wand2 className="w-6 h-6 text-brand-warm" />
+          </div>
+          {ui.header_title}
         </h1>
 
-        <div className="space-y-6">
-          {/* 1. 选择产品 */}
+        <div className="space-y-8">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">选择产品</label>
+            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">{ui.label_select_product}</label>
             {loadingProducts ? (
-              <div className="text-sm text-gray-400">加载产品库中...</div>
+              <div className="text-sm text-stone-400 italic flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> {ui.loading_products}</div>
             ) : (
               <select 
-                className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-purple-500 outline-none"
+                className="w-full border border-stone-200 bg-stone-50 rounded-xl p-4 focus:ring-2 focus:ring-brand-coffee focus:border-transparent outline-none transition-all font-medium"
                 onChange={(e) => {
                     const pid = parseInt(e.target.value);
                     setSelectedProduct(products.find(p => p.id === pid) || null);
-                    setSelectedPatternIndex(null); // 重置花型选择
+                    setSelectedPatternIndex(null);
                 }}
                 value={selectedProduct?.id || ''}
               >
-                <option value="">-- 请选择产品 --</option>
+                <option value="">{ui.placeholder_select}</option>
                 {products.map(p => (
                   <option key={p.id} value={p.id}>{p.sku} - {p.name.CN?.slice(0, 20)}...</option>
                 ))}
@@ -141,20 +165,19 @@ export default function AIGeneratorPage() {
             )}
           </div>
 
-          {/* 2. 选择花型 (如果有) */}
           {selectedProduct && selectedProduct.pattern_images?.length > 0 && (
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">选择重点推荐花型 (可选)</label>
-              <div className="grid grid-cols-4 gap-2">
+            <div className="animate-fade-in">
+              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">{ui.label_select_pattern}</label>
+              <div className="grid grid-cols-4 gap-3">
                 {selectedProduct.pattern_images.map((img, idx) => (
                   <div 
                     key={idx} 
                     onClick={() => setSelectedPatternIndex(idx === selectedPatternIndex ? null : idx)}
-                    className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${idx === selectedPatternIndex ? 'border-purple-600 ring-2 ring-purple-100' : 'border-transparent hover:border-gray-300'}`}
+                    className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-300 ${idx === selectedPatternIndex ? 'border-brand-coffee ring-4 ring-brand-apricot/50 scale-105' : 'border-transparent hover:border-stone-200'}`}
                   >
                     <img src={img} className="w-full h-full object-cover" />
                     {idx === selectedPatternIndex && (
-                      <div className="absolute inset-0 bg-purple-600/20 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-brand-coffee/40 flex items-center justify-center backdrop-blur-[1px]">
                         <Check className="w-6 h-6 text-white drop-shadow-md" />
                       </div>
                     )}
@@ -164,57 +187,54 @@ export default function AIGeneratorPage() {
             </div>
           )}
 
-          {/* 3. 选择国家 */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">目标市场/语言</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">{ui.label_target_market}</label>
+            <div className="grid grid-cols-2 gap-3">
               {COUNTRIES.map(c => (
                 <button
                   key={c.code}
                   onClick={() => setTargetCountry(c.code)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${targetCountry === c.code ? 'bg-purple-50 border-purple-500 text-purple-700 font-bold' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-300 ${targetCountry === c.code ? 'bg-brand-coffee text-white shadow-lg border-brand-coffee' : 'border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700'}`}
                 >
-                  <span>{c.icon}</span>
-                  {c.name.split(' ')[0]}
+                  <span className="text-lg">{c.icon}</span>
+                  {c.name}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 4. 内容类型 */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">内容类型</label>
-            <div className="flex bg-gray-100 p-1 rounded-lg">
+            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">{ui.label_content_type}</label>
+            <div className="flex bg-stone-100 p-1.5 rounded-2xl">
               <button 
                 onClick={() => setContentType('live_script')}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${contentType === 'live_script' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${contentType === 'live_script' ? 'bg-white shadow-md text-brand-coffee' : 'text-stone-400 hover:text-stone-600'}`}
               >
-                直播带货脚本
+                {ui.type_live_script}
               </button>
               <button 
                 onClick={() => setContentType('short_video')}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${contentType === 'short_video' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${contentType === 'short_video' ? 'bg-white shadow-md text-brand-coffee' : 'text-stone-400 hover:text-stone-600'}`}
               >
-                短视频文案
+                {ui.type_short_video}
               </button>
             </div>
           </div>
 
-          {/* 生成按钮 */}
           <button
             onClick={handleGenerate}
             disabled={!selectedProduct || generating}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+            className="w-full bg-brand-coffee hover:bg-stone-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3 mt-4 hover:-translate-y-0.5 active:translate-y-0"
           >
             {generating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                正在思考中...
+                {ui.btn_generating}
               </>
             ) : (
               <>
                 <Wand2 className="w-5 h-5" />
-                立即生成内容
+                {ui.btn_generate}
               </>
             )}
           </button>
@@ -222,32 +242,35 @@ export default function AIGeneratorPage() {
       </div>
 
       {/* 右侧：结果展示区 */}
-      <div className="w-full md:w-2/3 p-8 md:p-12 bg-gray-50 min-h-screen">
-        <div className="max-w-3xl mx-auto h-full flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">生成结果</h2>
+      <div className="w-full md:w-2/3 p-8 md:p-16 bg-[#fcfbf9] min-h-screen flex flex-col">
+        <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
+          <div className="flex justify-between items-end mb-8">
+            <h2 className="text-2xl font-serif font-bold text-brand-coffee italic">{ui.result_title}</h2>
             {result && (
               <button 
                 onClick={handleCopy}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition-colors bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm"
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-brand-coffee transition-colors bg-white px-4 py-2 rounded-full border border-stone-200 shadow-sm hover:shadow-md"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? '已复制' : '复制全文'}
+                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                {copied ? ui.btn_copied : ui.btn_copy}
               </button>
             )}
           </div>
 
-          <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 p-8 overflow-y-auto min-h-[500px] relative">
+          <div className="flex-1 bg-white rounded-[2.5rem] shadow-magazine border border-stone-100 p-10 md:p-12 overflow-y-auto min-h-[600px] relative">
             {result ? (
-              <div className="prose prose-purple max-w-none whitespace-pre-wrap leading-relaxed text-gray-700">
+              <div className="prose prose-stone max-w-none whitespace-pre-wrap leading-loose text-lg text-stone-600 font-medium">
                 {result}
               </div>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Wand2 className="w-8 h-8 text-gray-300" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-300">
+                <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                  <Wand2 className="w-10 h-10 text-stone-200" />
                 </div>
-                <p>请在左侧选择产品并配置参数，<br/>AI 将为您生成专属营销内容。</p>
+                <h3 className="text-xl font-bold text-stone-400 mb-2">{ui.empty_state_title}</h3>
+                <p className="text-center text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-70">
+                  {ui.empty_state_desc}
+                </p>
               </div>
             )}
           </div>
